@@ -1,0 +1,5 @@
+# HTTrack Website Copier Cookie File
+# This file format is compatible with Netscape cookies
+.materiasensible.cat	TRUE	/	FALSE	1999999999	__cfduid	dd3aa5764c73f69213f25afa0b85ac3f01526145223
+.materiasensible.cat	TRUE	/	FALSE	1999999999	SESS88f95bdcfca073c2539e07f9394592e4	3rV8Q5Qe1XFsKiLVZ56Rh3
+
