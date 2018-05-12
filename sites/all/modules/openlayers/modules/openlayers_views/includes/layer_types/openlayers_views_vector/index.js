@@ -1,0 +1,2 @@
+Drupal.openlayers.layer.openlayers_views_vector=function(title,map,options){options.options.drupalID=options.drupalID;options.projection=new OpenLayers.Projection('EPSG:'+options.projection);options.options.styleMap=Drupal.openlayers.getStyleMap(map,options.drupalID);var layer=new OpenLayers.Layer.Vector(title,options.options);if(options.features){Drupal.openlayers.addFeatures(map,layer,options.features);}
+return layer;};

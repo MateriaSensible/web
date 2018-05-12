@@ -1,0 +1,35 @@
+document.namespaces;Drupal.settings.openlayers={};Drupal.settings.openlayers.maps={};Drupal.behaviors.openlayers=function(context){if(typeof(Drupal.settings.openlayers)==='object'&&Drupal.settings.openlayers.maps&&!$(context).data('openlayers')){$('.openlayers-map:not(.openlayers-processed)').each(function(){$(this).addClass('openlayers-processed');var map_id=$(this).attr('id');try{if(Drupal.settings.openlayers.maps[map_id]){OpenLayers.Lang.setCode($('html').attr('lang'));var map=Drupal.settings.openlayers.maps[map_id];$(this).css('width',map.width).css('height',map.height);var options={};options.projection=new OpenLayers.Projection('EPSG:'+map.projection);options.displayProjection=new OpenLayers.Projection('EPSG:'+map.displayProjection);if(map.projection==='900913'){options.maxExtent=new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34);options.units='m';}
+if(map.projection==='4326'){options.maxExtent=new OpenLayers.Bounds(-180,-90,180,90);}
+options.maxResolution=1.40625;options.controls=[];if(map.image_path){OpenLayers.ImgPath=Drupal.openlayers.relatePath(map.image_path,Drupal.settings.basePath);}
+if(map.css_path){options.theme=Drupal.openlayers.relatePath(map.css_path,Drupal.settings.basePath);}
+if(map.proxy_host){OpenLayers.ProxyHost=Drupal.openlayers.relatePath(map.proxy_host,Drupal.settings.basePath);}
+var openlayers=new OpenLayers.Map(map.id,options);Drupal.openlayers.addLayers(map,openlayers);$(this).data('openlayers',{'map':map,'openlayers':openlayers});Drupal.attachBehaviors(this);if($.browser.msie){Drupal.openlayers.redrawVectors();}}}
+catch(e){if(typeof console!='undefined'){console.log(e);}
+else{$(this).text('Error during map rendering: '+e);}}});}};Drupal.openlayers={'relatePath':function(path,basePath){if(path.indexOf('://')>=0||path.indexOf('/')==0){return path;}
+else{return basePath+path;}},'redrawVectors':function(){$(window).load(function(){var map;for(map in Drupal.settings.openlayers.maps){$.each($('#'+map).data('openlayers').openlayers.getLayersByClass('OpenLayers.Layer.Vector'),function(i,layer){layer.redraw();});}});},'addLayers':function(map,openlayers){var sorted=[];for(var name in map.layers){sorted.push({'name':name,'weight':map.layers[name].weight});}
+sorted.sort(function(a,b){var x=a.weight;var y=b.weight;return((x<y)?-1:((x>y)?1:0));});for(var i=0;i<sorted.length;++i){var layer;var name=sorted[i].name;var options=map.layers[name];options.drupalID=name;if(options.layer_handler!==undefined&&Drupal.openlayers.layer[options.layer_handler]!==undefined){var layer=Drupal.openlayers.layer[options.layer_handler](map.layers[name].title,map,options);layer.visibility=!!(!map.layer_activated||map.layer_activated[name]);if(layer.isBaseLayer==false){layer.displayInLayerSwitcher=!!(!map.layer_switcher||map.layer_switcher[name]);}else{layer.displayInLayerSwitcher=true;}
+if(map.center.wrapdateline==='1'){layer.wrapDateLine=true;}
+openlayers.addLayer(layer);}}
+openlayers.setBaseLayer(openlayers.getLayersBy('drupalID',map.default_layer)[0]);if(map.center.initial){var center=OpenLayers.LonLat.fromString(map.center.initial.centerpoint).transform(new OpenLayers.Projection('EPSG:4326'),new OpenLayers.Projection('EPSG:'+map.projection));var zoom=parseInt(map.center.initial.zoom,10);openlayers.setCenter(center,zoom,false,false);}
+if(typeof map.center.restrict!=='undefined'&&map.center.restrict.restrictextent){openlayers.restrictedExtent=OpenLayers.Bounds.fromString(map.center.restrict.restrictedExtent);}},'addFeatures':function(map,layer,features){var newFeatures=[];for(var key in features){var feature=features[key];var newFeatureObject=this.objectFromFeature(feature);if(newFeatureObject){var newFeatureSet=[];if('geometry'in newFeatureObject){newFeatureSet[0]=newFeatureObject;}
+else{newFeatureSet=newFeatureObject;}
+if(newFeatureSet.length==1&&newFeatureSet[0]==undefined){newFeatureSet=[];}
+for(var i=0;i<newFeatureSet.length;i++){var newFeature=newFeatureSet[i];if(feature.projection){if(feature.projection!==map.projection){var featureProjection=new OpenLayers.Projection('EPSG:'+feature.projection);var mapProjection=new OpenLayers.Projection('EPSG:'+map.projection);newFeature.geometry.transform(featureProjection,mapProjection);}}
+if(feature.attributes){newFeature.attributes=feature.attributes;newFeature.drupalFID=key;}
+if(feature.style){newFeature.style=jQuery.extend({},OpenLayers.Feature.Vector.style['default'],feature.style);}
+newFeatures.push(newFeature);}}}
+if(newFeatures.length!==0){layer.addFeatures(newFeatures);}},'buildStyle':function(map,style_in){var style_out={};var newContext={};for(var propname in style_in){if(typeof style_in[propname]=='object'){var plugin_spec=style_in[propname];var plugin_name=plugin_spec['plugin'];var plugin_class=Drupal.openlayers.style_plugin[plugin_name];if(typeof plugin_class!=='function'){throw 'Style plugin '+plugin_name+
+' did not install a constructor in Drupal.openlayers.style_plugin["'+plugin_name+'"]';}
+var plugin_options=plugin_spec['conf'];var plugin_method_name=plugin_spec['method'];if(typeof plugin_method_name==='undefined'){throw "Name of method handler for property '"+propname+
+"' of style plugin '"+plugin_name+"' is undefined";}
+var plugin_context=new plugin_class(plugin_options);var plugin_method=plugin_context[plugin_method_name];if(typeof plugin_method!=='function'){throw "Style plugin '"+plugin_name+"' advertised method '"+
+plugin_method_name+"' as an handler for property "+propname+
+' but that method is not found in instance of plugin class';}
+var new_method_name=plugin_name+'_'+
+propname+'_'+
+plugin_method_name;newContext[new_method_name]=OpenLayers.Function.bind(plugin_method,plugin_context);style_out[propname]='${'+new_method_name+'}';}else{style_out[propname]=style_in[propname];}}
+var olStyle=new OpenLayers.Style(style_out,{context:newContext});return olStyle;},'getStyleMap':function(map,layername){if(map.styles){var stylesAdded={};var roles=['default','delete','select','temporary'];for(var i=0;i<roles.length;++i){role=roles[i];if(map.styles[role]){var style=map.styles[role];stylesAdded[role]=this.buildStyle(map,style);}}
+if(map.layer_styles!==undefined&&map.layer_styles[layername]){var layer_styles=map.layer_styles[layername];for(var i=0;i<roles.length;++i){role=roles[i];if(layer_styles[role]){var style_name=layer_styles[role];var style=map.styles[style_name];stylesAdded[role]=this.buildStyle(map,style);}}}
+return new OpenLayers.StyleMap(stylesAdded);}
+return new OpenLayers.StyleMap({'default':new OpenLayers.Style({pointRadius:5,fillColor:'#ffcc66',strokeColor:'#ff9933',strokeWidth:4,fillOpacity:0.5}),'select':new OpenLayers.Style({fillColor:'#66ccff',strokeColor:'#3399ff'})});},'objectFromFeature':function(feature){var wktFormat=new OpenLayers.Format.WKT();if(feature.wkt){return wktFormat.read(feature.wkt);}
+else if(feature.lon){return wktFormat.read('POINT('+feature.lon+' '+feature.lat+')');}}};Drupal.openlayers.layer={};Drupal.openlayers.style_plugin={};
